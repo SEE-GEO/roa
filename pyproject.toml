@@ -20,20 +20,20 @@ dependencies = [
     "bottleneck",
     "dask",
     "eumdac",
+    "ipwgml @ git+https://github.com/simonpf/ipwgml@b9dfd64bd13e32aa54929b2451d87ac66587f378",
     "netCDF4",
-    "numba>=0.60.0",
-    "numpy>=1.26",
+    "numba",
+    "numpy",
     "pansat==0.1.2",
-    "pyproj>=3.6.1",
-    "pyresample>=1.29.0",
+    "pyproj",
+    "pyresample",
     "quantnn==0.0.5",
-    "satpy>=0.50.0",
-    "scipy>=1.14.0",
-    "torch>=1.13.1",
-    "torchvision>=0.14.1",
-    "xarray>=2024.7.0",
+    "satpy",
+    "scipy",
+    "torch",
+    "torchvision",
+    "xarray",
     "zarr",
-    "pip @ git+https://github.com/simonpf/ipwgml.git@b9dfd64bd13e32aa54929b2451d87ac66587f378",
 ]
 description = "Rain over Africa retrievals"
 dynamic = ["version"]
@@ -48,6 +48,9 @@ requires-python = ">= 3.10"
 
 [project.urls]
 Repository = "https://github.com/SEE-GEO/roa"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.version]
 source = "vcs"
