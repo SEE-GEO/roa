@@ -15,6 +15,6 @@ $ pip install git+https://github.com/SEE-GEO/roa
 
 You can also clone the repository and install locally. In any case, you need the file [`data/network_CPU.pt`](data/network_CPU.pt) from this repository.
 
-Note that many unused dependencies are installed as they are required by other dependencies.
+Note that many unused dependencies are installed as they are required by other dependencies. We do not guarantee that the PyTorch install correctly links to your GPU, if you have one.
 
 For an illustrative example of complete retrievals, check [`docs/example.ipynb`](docs/example.ipynb).
