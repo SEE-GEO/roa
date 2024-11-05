@@ -1,5 +1,5 @@
 from .data import (
-    MSGDataset,
+    MSGNative,
     QUANTILES,
     prepare_dataset_for_network
 )
