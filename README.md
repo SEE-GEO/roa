@@ -13,7 +13,7 @@ Installation of RoA:
 $ pip install git+https://github.com/SEE-GEO/roa
 ```
 
-You can also clone the repository and install locally. In any case, you need the file [`data/network_CPU.pt`][data/network_CPU.pt] from this repository.
+You can also clone the repository and install locally. In any case, you need the file [`data/network_CPU.pt`](data/network_CPU.pt) from this repository.
 
 Note that many unused dependencies are installed as they are required by other dependencies.
 
