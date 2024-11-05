@@ -9,7 +9,7 @@ Requirements:
 - Python 3.10
 
 Installation of RoA:
-```shell
+```
 $ pip install git+https://github.com/SEE-GEO/roa
 ```
 
