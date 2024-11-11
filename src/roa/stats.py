@@ -121,7 +121,6 @@ class FourierSpectralDensity:
             pred: A np.ndarray containing the predicted precipitation field.
             target: A np.ndarray containing the reference data.
         """
-        pred = pred
         valid = np.isfinite(target)
         for rect in iterate_windows(valid, self.window_size):
             row_start, col_start, row_end, col_end = rect
