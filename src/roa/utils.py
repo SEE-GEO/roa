@@ -1,6 +1,21 @@
+import contextlib
+
 import numpy as np
 from scipy.stats import loguniform
 import torch
+
+@contextlib.contextmanager
+def temp_seed(seed: int):
+    """
+    Temporarily set the random seed for the duration of the context.
+    https://stackoverflow.com/a/49557127
+    """
+    state = np.random.get_state()
+    np.random.seed(seed)
+    try:
+        yield
+    finally:
+        np.random.set_state(state)
 
 def categorizer(x: np.ndarray[float],
                 thresholds: np.ndarray[float]=np.array([0.2, 2.5, 10, 50])

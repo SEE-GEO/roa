@@ -5,6 +5,8 @@ from scipy.stats import rankdata
 import torch
 import xarray as xr
 
+from roa.utils import temp_seed
+
 def spearman_correlation_2d(x: np.ndarray, y: np.ndarray, axis: int=1) -> np.ndarray:
     """
     Compute the Spearman correlation coefficient between two 2-dimensional NumPy arrays
@@ -112,7 +114,7 @@ class FourierSpectralDensity:
         self.coeffs_diffs_sum2 = np.zeros((window_size, window_size), dtype=np.float64)
         self.counts = np.zeros((window_size, window_size), dtype=np.int64)
 
-    def update(self, pred: np.ndarray, target: np.ndarray):
+    def update(self, pred: np.ndarray, target: np.ndarray, seed: int=None):
         """
         Calculate spectral statistics for all valid sample windows in
         given results.
@@ -120,23 +122,27 @@ class FourierSpectralDensity:
         Args:
             pred: A np.ndarray containing the predicted precipitation field.
             target: A np.ndarray containing the reference data.
+            seed: Seed for reproducibility.
         """
         valid = np.isfinite(target)
-        for rect in iterate_windows(valid, self.window_size):
-            row_start, col_start, row_end, col_end = rect
-            pred_w = pred[row_start:row_end, col_start:col_end]
-            target_w = target[row_start:row_end, col_start:col_end]
-            w_pred = fftshift(fftn(pred_w, norm="ortho"))
-            w_target = fftshift(fftn(target_w, norm="ortho"))
-            self.coeffs_target_sum += w_target
-            self.coeffs_target_sum2 += np.abs(w_target * w_target.conj())
-            self.coeffs_pred_sum += w_pred
-            self.coeffs_pred_sum2 += np.abs(w_pred * w_pred.conj())
-            self.coeffs_targetpred_sum += w_target * w_pred.conj()
-            self.coeffs_targetpred_sum2 += np.abs(w_target * w_pred.conj() * (w_target * w_pred.conj()).conj())
-            self.coeffs_diffs_sum = w_target - w_pred
-            self.coeffs_diffs_sum2 = np.abs(self.coeffs_diffs_sum * self.coeffs_diffs_sum.conj())
-            self.counts += np.isfinite(w_pred)
+        with temp_seed(seed):
+            # iterate_windows uses np.random.choice
+            # allow for setting seed for reproducibility
+            for rect in iterate_windows(valid, self.window_size):
+                row_start, col_start, row_end, col_end = rect
+                pred_w = pred[row_start:row_end, col_start:col_end]
+                target_w = target[row_start:row_end, col_start:col_end]
+                w_pred = fftshift(fftn(pred_w, norm="ortho"))
+                w_target = fftshift(fftn(target_w, norm="ortho"))
+                self.coeffs_target_sum += w_target
+                self.coeffs_target_sum2 += np.abs(w_target * w_target.conj())
+                self.coeffs_pred_sum += w_pred
+                self.coeffs_pred_sum2 += np.abs(w_pred * w_pred.conj())
+                self.coeffs_targetpred_sum += w_target * w_pred.conj()
+                self.coeffs_targetpred_sum2 += np.abs(w_target * w_pred.conj() * (w_target * w_pred.conj()).conj())
+                self.coeffs_diffs_sum = w_target - w_pred
+                self.coeffs_diffs_sum2 = np.abs(self.coeffs_diffs_sum * self.coeffs_diffs_sum.conj())
+                self.counts += np.isfinite(w_pred)
 
     def to_dataset(self):
         """
