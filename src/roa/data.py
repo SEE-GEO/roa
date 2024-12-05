@@ -166,7 +166,7 @@ def prepare_dataset_for_network(ds: xr.Dataset, fill_value: float=FILL_VALUE) ->
     return x.float()
 
     
-def to_latlon(ds: xr.Dataset, lonlat_res: float=LONLAT_RES) -> xr.Dataset:
+def to_latlon(ds: xr.Dataset, lonlat_res: float=LONLAT_RES, area_def_eq: AreaDefinition=None) -> xr.Dataset:
     """
     Map data on the SEVIRI grid to a regular lat-lon grid.
 
@@ -199,12 +199,13 @@ def to_latlon(ds: xr.Dataset, lonlat_res: float=LONLAT_RES) -> xr.Dataset:
         lat_min + lonlat_res * y_size
     ]
 
-    area_def_eqc = AreaDefinition(
-            area_id='eqc', description = 'Equidistant Cylindrical',
-            proj_id = 'eqc', projection = 'epsg:4326', 
-            width=x_size, height=y_size,
-            area_extent=area_extent
-    )
+    if area_def_eq is None:
+        area_def_eqc = AreaDefinition(
+                area_id='eqc', description = 'Equidistant Cylindrical',
+                proj_id = 'eqc', projection = 'epsg:4326', 
+                width=x_size, height=y_size,
+                area_extent=area_extent
+        )
 
     area_def_seviri = AreaDefinition(
         area_id='seviri_0deg', description='seviri_0deg',
