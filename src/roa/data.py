@@ -192,14 +192,13 @@ def to_latlon(ds: xr.Dataset, lonlat_res: float=LONLAT_RES, area_def_eq: AreaDef
     x_size = ds.x.size
     y_size = ds.y.size
 
-    area_extent = [
-        lon_min,
-        lat_min,
-        lon_min + lonlat_res * x_size,
-        lat_min + lonlat_res * y_size
-    ]
-
     if area_def_eq is None:
+        area_extent = [
+            lon_min,
+            lat_min,
+            lon_min + lonlat_res * x_size,
+            lat_min + lonlat_res * y_size
+        ]
         area_def_eqc = AreaDefinition(
                 area_id='eqc', description = 'Equidistant Cylindrical',
                 proj_id = 'eqc', projection = 'epsg:4326', 
