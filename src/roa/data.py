@@ -166,7 +166,7 @@ def prepare_dataset_for_network(ds: xr.Dataset, fill_value: float=FILL_VALUE) ->
     return x.float()
 
     
-def to_latlon(ds: xr.Dataset, lonlat_res: float=LONLAT_RES, area_def_eq: AreaDefinition=None) -> xr.Dataset:
+def to_latlon(ds: xr.Dataset, lonlat_res: float=LONLAT_RES, area_def_eqc: AreaDefinition=None) -> xr.Dataset:
     """
     Map data on the SEVIRI grid to a regular lat-lon grid.
 
@@ -192,7 +192,7 @@ def to_latlon(ds: xr.Dataset, lonlat_res: float=LONLAT_RES, area_def_eq: AreaDef
     x_size = ds.x.size
     y_size = ds.y.size
 
-    if area_def_eq is None:
+    if area_def_eqc is None:
         area_extent = [
             lon_min,
             lat_min,
@@ -221,7 +221,13 @@ def to_latlon(ds: xr.Dataset, lonlat_res: float=LONLAT_RES, area_def_eq: AreaDef
         fill_value=np.nan
     )
 
-    return ds.copy(data={k: resampled_data[..., i] for i, k in enumerate(ds.keys())})
+    return xr.Dataset(
+        data_vars={k: (("y", "x"), resampled_data[..., i]) for i, k in enumerate(ds.keys())},
+        coords={
+            "x": area_def_eqc.projection_x_coords,
+            "y": area_def_eqc.projection_y_coords
+        }
+    ).expand_dims("nat_file").assign_coords(nat_file=[ds.nat_file.values])
 
 @jit(nopython=True)
 def satellite_angles(lons_o: np.ndarray[np.float64], lats_o: np.ndarray[np.float64],
