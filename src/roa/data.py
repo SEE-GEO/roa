@@ -486,3 +486,38 @@ class GPM:
             }
         )
         self.resampled = True
+
+
+class GPM2BCMB:
+    """
+   Class to load GPM 2BCMB data without pansat.
+
+    Args:
+        file_path: path to the GPM file to load. Also works with earthaccess granules.
+    """
+    def __init__(self, file_path: Path | str) -> None:
+        self.file_path = Path(file_path)
+    
+    def read(self, variables: list=['nearSurfPrecipTotRate']) -> xr.Dataset:
+        variables = variables + ['Latitude', 'Longitude']
+        ds = xr.open_dataset(self.file_path, group='KuGMI')[set(variables)]
+        ds = ds.rename_dims({k_old: k_new for k_old, k_new in zip(sorted(ds.sizes, key=ds.sizes.get), ['matched', 'points'])})
+        return ds.assign_coords(matched=np.arange(49), points=self.get_timestamps().timestamp.values)
+
+    def get_timestamps(self) -> xr.Dataset:
+        ds = xr.open_dataset(self.file_path, group='KuGMI/ScanTime')
+        digits = zip(
+            ds.Year.values.astype(int),
+            ds.Month.values.astype(int),
+            ds.DayOfMonth.values.astype('timedelta64[D]').astype(int),
+            ds.Hour.values.astype('timedelta64[h]').astype(int),
+            ds.Minute.values.astype('timedelta64[m]').astype(int),
+            ds.Second.values.astype(int),
+            ds.MilliSecond.values.astype(int)
+        )
+        dates = []
+        for d in digits:
+            dates.append(
+                np.datetime64(f"{d[0]}-{d[1]:02d}-{d[2]:02d}T{d[3]:02d}:{d[4]:02d}:{d[5]:02d}.{d[6]:03d}")
+            )
+        return xr.DataArray(np.array(dates).astype('datetime64[ns]'), dims=ds.dims, name='timestamp').to_dataset()
