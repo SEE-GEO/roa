@@ -517,7 +517,18 @@ class GPM2BCMB:
         )
         dates = []
         for d in digits:
+            # The if conditions handle spurious cases
+            dt = np.timedelta64(0)
+            if d[5] >= 60:
+                d[5] = 0
+                dt += np.timedelta64(1, 'm')
+            if d[4] >= 60:
+                d[4] = 0
+                dt += np.timedelta64(1, 'h')
+            if d[3] >= 24:
+                d[3] = 0
+                dt += np.timedelta64(1, 'D')
             dates.append(
-                np.datetime64(f"{d[0]}-{d[1]:02d}-{d[2]:02d}T{d[3]:02d}:{d[4]:02d}:{d[5]:02d}.{d[6]:03d}")
+                np.datetime64(f"{d[0]}-{d[1]:02d}-{d[2]:02d}T{d[3]:02d}:{d[4]:02d}:{d[5]:02d}.{d[6]:03d}") + dt
             )
         return xr.DataArray(np.array(dates).astype('datetime64[ns]'), dims=ds.dims, name='timestamp').to_dataset()
