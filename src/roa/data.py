@@ -518,6 +518,7 @@ class GPM2BCMB:
         dates = []
         for d in digits:
             # The if conditions handle spurious cases
+            # There's at least one case that yields 2015-06-30T23:59:60.200 otherwise
             dt = np.timedelta64(0)
             if d[5] >= 60:
                 d[5] = 0
