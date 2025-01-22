@@ -304,10 +304,12 @@ class MSGNative:
     used in the RoA paper, and adding the satellite zenith angle.
 
     Args:
-        file_path: path to the MSG file to load
+        file: path to the MSG file to load
     """
-    def __init__(self, file_path: str):
-        self.file_path = file_path
+    def __init__(self, file: str):
+        self.file = file
+        self.reader = 'seviri_l1b_native'
+
 
     def get_dataset(self,
                     area_extent: dict[str, int]={
@@ -324,7 +326,8 @@ class MSGNative:
         Returns:
             Dataset with the channels and satellite zenith angle.
         """
-        scn = Scene(filenames=[self.file_path], reader='seviri_l1b_native')
+        filenames = [self.file] if self.reader == 'seviri_l1b_native' else self.file
+        scn = Scene(filenames=filenames, reader=self.reader)
         scn.load(CHANNELS_MAP.values())
         ds = xr.merge(
             (
@@ -364,6 +367,25 @@ class MSGNative:
                 )
             )
         )
+    
+
+class MSGHRIT(MSGNative):
+    """
+    Class to load MSG data in HRIT format using Satpy, selecting only the channels
+    used in the RoA paper, and adding the satellite zenith angle.
+
+    Args:
+        file: path to the MSG observation in HRIT format
+    
+    Notes:
+        The `file` argument is a list of files when using MSGHRIT. See
+        https://user.eumetsat.int/catalogue/EO:EUM:DAT:MSG:HRSEVIRI/access
+        and
+        https://satpy.readthedocs.io/en/stable/api/satpy.readers.seviri_l1b_hrit.html
+    """
+    def __init__(self, file: list[str]):
+        self.file = file
+        self.reader = 'seviri_l1b_hrit'
     
 
 class MSGDataset(Dataset):
