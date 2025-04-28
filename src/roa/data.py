@@ -399,6 +399,7 @@ class MSGDataset(Dataset):
         fill_value: input NaNs will be masked with this value.
         resample: use the regular lat-lon grid.
         train: return data with data augmentation for training
+        grid: return the coordinates of the data
 
     Returns:
         Standardized inputs for the network, with channels sorted as
@@ -408,11 +409,12 @@ class MSGDataset(Dataset):
 
     def __init__(self, path: str, gpm_precip: bool=False,
                  area_extent: list[float]=None, fill_value: float=FILL_VALUE,
-                 resample: bool=False, train: bool=False):
+                 resample: bool=False, train: bool=False, grid: bool=False):
         self.files = sorted(list(Path(path).rglob('*nc')))
         self.gpm_precip = gpm_precip
         self.fill_value = fill_value
         self.resample = resample
+        self.grid = grid
 
         self.transforms_input = TRANSFORMS_INPUT
         self.transforms_reference = transforms.Compose([transforms.ToTensor()])
@@ -428,6 +430,16 @@ class MSGDataset(Dataset):
     
     def __getitem__(self, idx):
         with xr.open_dataset(self.files[idx]) as ds:
+            if self.grid:
+                xx = np.linspace(
+                    ds.area_extent[0], ds.area_extent[2], 256, endpoint=False,
+                    dtype=np.float32
+                )
+                yy = np.linspace(
+                    ds.area_extent[3], ds.area_extent[1], 256, endpoint=False,
+                    dtype=np.float32
+                )
+
             if self.resample:
                 x = prepare_dataset_for_network(to_latlon(ds), fill_value=self.fill_value)
             else:
@@ -439,9 +451,15 @@ class MSGDataset(Dataset):
             if self.train:
                 x, y = self._data_augmentation(x, y)
             
-            return x, y
+            if self.grid:
+                return x, y, xx, yy
+            else:
+                return x, y
         
-        return x
+        if self.grid:
+            return x, xx, yy
+        else:
+            return x
     
     def _data_augmentation(self, x, y):
         # Random number generator
