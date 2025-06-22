@@ -140,8 +140,8 @@ class FourierSpectralDensity:
                 self.coeffs_pred_sum2 += np.abs(w_pred * w_pred.conj())
                 self.coeffs_targetpred_sum += w_target * w_pred.conj()
                 self.coeffs_targetpred_sum2 += np.abs(w_target * w_pred.conj() * (w_target * w_pred.conj()).conj())
-                self.coeffs_diffs_sum = w_target - w_pred
-                self.coeffs_diffs_sum2 = np.abs(self.coeffs_diffs_sum * self.coeffs_diffs_sum.conj())
+                self.coeffs_diffs_sum += w_target - w_pred
+                self.coeffs_diffs_sum2 += np.abs(self.coeffs_diffs_sum * self.coeffs_diffs_sum.conj())
                 self.counts += np.isfinite(w_pred)
 
     def to_dataset(self):
