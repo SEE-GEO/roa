@@ -124,7 +124,7 @@ class FourierSpectralDensity:
             target: A np.ndarray containing the reference data.
             seed: Seed for reproducibility.
         """
-        valid = np.isfinite(target)
+        valid = np.isfinite(target) & np.isfinite(pred)
         with temp_seed(seed):
             # iterate_windows uses np.random.choice
             # allow for setting seed for reproducibility
