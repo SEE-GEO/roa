@@ -26,6 +26,16 @@ CHANNELS_MAP = {
     11: 'IR_134'
 }
 
+CHANNELS_FCI2SEVIRI_MAP = {
+    'wv_63': 'WV_062',
+    'wv_73': 'WV_073',
+    'ir_87': 'IR_087',
+    'ir_97': 'IR_097',
+    'ir_105': 'IR_108',
+    'ir_123': 'IR_120',
+    'ir_133': 'IR_134'
+}
+
 TRAINING_SET_STATISTICS = {
     "mean": {
         "IR_087": 282.1137428513001,
@@ -310,6 +320,25 @@ class MSGNative:
         self.file = file
         self.reader = 'seviri_l1b_native'
 
+    def _read_data(
+        self,
+    ) -> xr.Dataset:
+        """
+        Read the data with Satpy
+        """
+        filenames = [self.file] if self.reader == 'seviri_l1b_native' else self.file
+        scn = Scene(filenames=filenames, reader=self.reader)
+        scn.load(CHANNELS_MAP.values())
+        ds = xr.merge(
+            (
+                xr.merge(
+                    [scn[name].reset_coords(drop=True).to_dataset(name=name) for name in CHANNELS_MAP.values()]
+                ),
+                # Use an arbitrary channel to obtain the line acquisition time
+                scn['WV_062'].acq_time.reset_coords(names='acq_time').reset_coords(drop=True)
+            )
+        )
+        return ds
 
     def get_dataset(self,
                     area_extent: dict[str, int]={
@@ -326,24 +355,13 @@ class MSGNative:
         Returns:
             Dataset with the channels and satellite zenith angle.
         """
-        filenames = [self.file] if self.reader == 'seviri_l1b_native' else self.file
-        scn = Scene(filenames=filenames, reader=self.reader)
-        scn.load(CHANNELS_MAP.values())
-        ds = xr.merge(
-            (
-                xr.merge(
-                    [scn[name].reset_coords(drop=True).to_dataset(name=name) for name in CHANNELS_MAP.values()]
-                ),
-                # Use an arbitrary channel to obtain the line acquisition time
-                scn['WV_062'].acq_time.reset_coords(names='acq_time').reset_coords(drop=True)
-            )
-        )
+        ds = self._read_data()
         if area_extent:
             ds = ds[{'y': area_extent['y'], 'x': area_extent['x']}]
         x, y = np.broadcast_arrays(ds.x.data.reshape(1, -1), ds.y.data.reshape(-1, 1))
         # Use arbitrary channel to obtain orbital parameters
         lons_o, lats_o = SEVIRI_0DEG_AREADEF.get_lonlat_from_projection_coordinates(x, y)
-        orbital_parameters = scn['WV_062'].attrs['orbital_parameters']
+        orbital_parameters = ds['WV_062'].attrs['orbital_parameters']
         satellite_zenith = satellite_angles(
             lons_o,
             lats_o,
