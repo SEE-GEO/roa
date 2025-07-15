@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+import pickle
 import warnings
 
 import numpy as np
@@ -355,7 +357,13 @@ class MSGNative:
         Returns:
             Dataset with the channels and satellite zenith angle.
         """
-        ds = self._read_data()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="^invalid value encountered in cast",
+                category=RuntimeWarning
+            )
+            ds = self._read_data()
         if area_extent:
             ds = ds[{'y': area_extent['y'], 'x': area_extent['x']}]
         x, y = np.broadcast_arrays(ds.x.data.reshape(1, -1), ds.y.data.reshape(-1, 1))
@@ -404,7 +412,89 @@ class MSGHRIT(MSGNative):
     def __init__(self, file: list[str]):
         self.file = file
         self.reader = 'seviri_l1b_hrit'
-    
+
+
+class FCI2SEVIRI(MSGNative):
+    """
+    Class to load FCI data and map it to SEVIRI, emulating MSGNative
+    """
+    def __init__(self, file: list[str] | list[Path]):
+        assert isinstance(file, list)
+        assert len(file) == 40
+        assert all(str(f).endswith('.nc') for f in file)
+
+        self.file = file
+        self.reader = 'fci_l1c_nc'
+
+    def _read_data(
+        self,
+    ) -> xr.Dataset:
+        """
+        Read the data with Satpy and map it to SEVIRI, since we emulate MSGNative.
+        """
+        scn = Scene(filenames=self.file, reader=self.reader)
+        scn.load(CHANNELS_FCI2SEVIRI_MAP.keys())
+        scn.load([f'{v}_time' for v in CHANNELS_FCI2SEVIRI_MAP.keys()])
+        # Get the acquisition time:
+        time_offset = np.datetime64('2000')
+        time_array = np.stack(
+            [
+                scn[f'{v}_time'].astype('timedelta64[s]') + time_offset
+                for v in CHANNELS_FCI2SEVIRI_MAP.keys()
+            ],
+            axis=-1
+        )
+        # Assume all channels have the same time, handling NaTs
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="^All-NaN slice encountered",
+                category=RuntimeWarning
+            )
+            time_array = np.nanmin(time_array, axis=-1)
+        time_array = xr.DataArray(
+            time_array.astype('datetime64[ns]'),
+            coords={
+                # Arbitrary channel to obtain coordinates
+                'y': scn['wv_63'].y.data,
+                'x': scn['wv_63'].x.data
+            },
+            dims=('y', 'x'),
+            name='acq_time'
+        )
+        ds = xr.merge(
+            (
+                xr.merge(
+                    [
+                        scn[name_fci].reset_coords(drop=True).to_dataset(name=name_seviri)
+                        for name_fci, name_seviri in CHANNELS_FCI2SEVIRI_MAP.items()
+                    ]
+                ),
+                time_array.reset_coords(drop=True)
+            )
+        )
+        # Now map the data to SEVIRI grid
+        if 'FCI2SEVIRI_NEAREST_NEIGHBOUR_LINESAMPLE_ARRAYS' in os.environ:
+            with open(os.environ['FCI2SEVIRI_NEAREST_NEIGHBOUR_LINESAMPLE_ARRAYS'], 'rb') as handle:
+                idx_row_map, idx_col_map, mask_invalid = pickle.load(handle)
+        else:
+            from roa.utils import fci2seviri_generate_nearest_neighbour_linesample_arrays
+            idx_row_map, idx_col_map, mask_invalid = fci2seviri_generate_nearest_neighbour_linesample_arrays(
+                None
+            )
+        
+        ds = ds.rename(
+            {'y': 'y_fci', 'x': 'x_fci'}
+        ).isel(
+            y_fci=idx_row_map,
+            x_fci=idx_col_map
+        ).reset_coords(
+            drop=True
+        ).where(
+            mask_invalid
+        )
+        return ds.compute()
+
 
 class MSGDataset(Dataset):
     """PyTorch Dataset to load MSG data for evaluation or inference.

@@ -1,8 +1,107 @@
 import contextlib
+import pickle
 
 import numpy as np
+from pyresample.geometry import AreaDefinition
+from pyresample.kd_tree import resample_nearest
+from satpy.resample import get_area_def
 from scipy.stats import loguniform
 import torch
+import xarray as xr
+
+from roa.data import SEVIRI_0DEG_AREADEF
+
+def fci2seviri_generate_nearest_neighbour_linesample_arrays(
+    output_file
+) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray]:
+    """
+    Generate the indexes that map FCI to SEVIRI grid
+
+    Args:
+        output_file: where to save the generated arrays.
+
+    Note:
+        Reading the native SEVIRI data results in flipped coordinates than
+        what SEVIRI_0DEG_AREADEF expects, and reading the native FCI data results
+        in coordinates flipped upside down compared to what a "FCI_0DEG_AREADEF"
+        would expect.
+
+        That is, when reading the native data, the corresponding coordinates are (close to)
+
+        x_seviri = SEVIRI_0DEG_AREADEF.projection_x_coords[::-1]
+        y_seviri = SEVIRI_0DEG_AREADEF.projection_y_coords[::-1]
+
+        x_fci = FCI_0DEG_AREADEF.projection_x_coords
+        y_fci = FCI_0DEG_AREADEF.projection_y_coords[::-1]
+
+        This function generates the arrays for the nearest neighbour applied upon
+        reading the data, not on "SEVIRI/FCI_0DEG_AREADEF" area definitions. That is,
+        it matches the {x,y}_{seviri,fci} definitions above.
+    """
+    fci_0deg_areadef = get_area_def('mtg_fci_fdss_2km')
+
+    fci_0deg_areadef = AreaDefinition(
+        fci_0deg_areadef.area_id,
+        fci_0deg_areadef.description,
+        fci_0deg_areadef.proj_id,
+        fci_0deg_areadef.crs,
+        fci_0deg_areadef.width,
+        fci_0deg_areadef.height,
+        tuple(np.array(fci_0deg_areadef.area_extent)[[0, 3, 2, 1]].tolist())
+    )
+
+    seviri_0deg_areadef = AreaDefinition(
+        SEVIRI_0DEG_AREADEF.area_id,
+        SEVIRI_0DEG_AREADEF.description,
+        SEVIRI_0DEG_AREADEF.proj_id,
+        SEVIRI_0DEG_AREADEF.crs,
+        SEVIRI_0DEG_AREADEF.width,
+        SEVIRI_0DEG_AREADEF.height,
+        tuple(np.array(SEVIRI_0DEG_AREADEF.area_extent)[[2, 3, 0, 1]].tolist())
+    )
+
+    idx_col, idx_row = np.meshgrid(
+        np.arange(fci_0deg_areadef.width),
+        np.arange(fci_0deg_areadef.height)
+    )
+    idx_col_map = resample_nearest(
+        fci_0deg_areadef,
+        idx_col,
+        seviri_0deg_areadef,
+        radius_of_influence=3e3,
+        fill_value=-1
+    )
+    idx_row_map = resample_nearest(
+        fci_0deg_areadef,
+        idx_row,
+        seviri_0deg_areadef,
+        radius_of_influence=3e3,
+        fill_value=-1
+    )
+    idx_col_map = xr.DataArray(
+        idx_col_map,
+        dims=['y', 'x'],
+        coords={
+            'y': seviri_0deg_areadef.projection_y_coords,
+            'x': seviri_0deg_areadef.projection_x_coords
+        }
+    )
+    idx_row_map = xr.DataArray(
+        idx_row_map,
+        dims=['y', 'x'],
+        coords={
+            'y': seviri_0deg_areadef.projection_y_coords,
+            'x': seviri_0deg_areadef.projection_x_coords
+        }
+    )
+    mask_invalid = (idx_col_map == -1) | (idx_row_map == -1)
+
+    if output_file is not None:
+        with open(output_file, 'wb') as handle:
+            pickle.dump((idx_row_map, idx_col_map, mask_invalid), handle)
+
+    return idx_row_map, idx_col_map, mask_invalid
+
 
 @contextlib.contextmanager
 def temp_seed(seed: int):
