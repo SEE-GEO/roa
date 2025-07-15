@@ -483,17 +483,21 @@ class FCI2SEVIRI(MSGNative):
                 None
             )
         
-        ds = ds.rename(
-            {'y': 'y_fci', 'x': 'x_fci'}
-        ).isel(
-            y_fci=idx_row_map,
-            x_fci=idx_col_map
-        ).reset_coords(
-            drop=True
-        ).where(
-            mask_invalid
-        )
-        return ds.compute()
+        data_vars = {}
+        for var_name in ds.data_vars:
+            data_array = ds[var_name].values
+            # Use advanced numpy indexing, using xarray indexing results much more slow
+            resampled_data = data_array[idx_row_map.values, idx_col_map.values]
+            data_vars[var_name] = (('y', 'x'), resampled_data)
+        
+        ds_resampled = xr.Dataset(data_vars=data_vars, coords=mask_invalid.coords).where(mask_invalid)
+
+        # Preserve attributes
+        for var_name in ds_resampled.variables:
+            ds_resampled[var_name].attrs = ds[var_name].attrs
+        ds_resampled.attrs = ds.attrs
+
+        return ds_resampled
 
 
 class MSGDataset(Dataset):
