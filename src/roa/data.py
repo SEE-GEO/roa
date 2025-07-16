@@ -448,20 +448,20 @@ class FCI2SEVIRI(MSGNative):
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
-                message="^All-NaN slice encountered",
+                message="All-NaN slice encountered",
                 category=RuntimeWarning
             )
             time_array = np.nanmin(time_array, axis=-1)
-        time_array = xr.DataArray(
-            time_array.astype('datetime64[ns]'),
-            coords={
-                # Arbitrary channel to obtain coordinates
-                'y': scn['wv_63'].y.data,
-                'x': scn['wv_63'].x.data
-            },
-            dims=('y', 'x'),
-            name='acq_time'
-        )
+            time_array = xr.DataArray(
+                time_array.astype('datetime64[ns]'),
+                coords={
+                    # Arbitrary channel to obtain coordinates
+                    'y': scn['wv_63'].y.data,
+                    'x': scn['wv_63'].x.data
+                },
+                dims=('y', 'x'),
+                name='acq_time'
+            )
         ds = xr.merge(
             (
                 xr.merge(
