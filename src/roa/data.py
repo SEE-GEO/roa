@@ -8,7 +8,7 @@ from pyproj import Transformer
 from pyresample.geometry import AreaDefinition, SwathDefinition
 from pyresample.kd_tree import resample_nearest
 from satpy import Scene
-from satpy.resample import get_area_def
+from satpy.area import get_area_def
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
