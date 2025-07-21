@@ -8,7 +8,14 @@ from pyproj import Transformer
 from pyresample.geometry import AreaDefinition, SwathDefinition
 from pyresample.kd_tree import resample_nearest
 from satpy import Scene
-from satpy.area import get_area_def
+try:
+    from satpy.area import get_area_def
+except ImportError:
+    from satpy.resample import get_area_def
+    warnings.warn(
+        "Falling back to legacy 'satpy.resample.get_area_def'. "
+        "Consider upgrading Satpy; this path is deprecated and slated for removal.",
+    )
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
