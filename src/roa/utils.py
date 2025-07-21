@@ -1,10 +1,18 @@
 import contextlib
 import pickle
+import warnings
 
 import numpy as np
 from pyresample.geometry import AreaDefinition
 from pyresample.kd_tree import resample_nearest
-from satpy.resample import get_area_def
+try:
+    from satpy.area import get_area_def
+except:
+    from satpy.resample import get_area_def
+    warnings.warn(
+        "Falling back to legacy 'satpy.resample.get_area_def'. "
+        "Consider upgrading Satpy; this path is deprecated and slated for removal.",
+    )
 from scipy.stats import loguniform
 import torch
 import xarray as xr
