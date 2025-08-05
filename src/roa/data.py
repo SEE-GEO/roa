@@ -497,7 +497,7 @@ class FCI2SEVIRI(MSGNative):
             resampled_data = data_array[idx_row_map.values, idx_col_map.values]
             data_vars[var_name] = (('y', 'x'), resampled_data)
         
-        ds_resampled = xr.Dataset(data_vars=data_vars, coords=mask_invalid.coords).where(mask_invalid)
+        ds_resampled = xr.Dataset(data_vars=data_vars, coords=mask_invalid.coords).where(~mask_invalid)
 
         # Preserve attributes
         for var_name in ds_resampled.variables:
