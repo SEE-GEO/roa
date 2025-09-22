@@ -177,3 +177,22 @@ class VaryZerosLog(VaryZeros):
 
     def invert(self, sample):
         return super().invert(torch.exp(sample))
+    
+def mask_invalid_rates(
+    a: np.ndarray,
+    max_rate: float = 1e2,
+):
+    """
+    Occasionally, the precipitation rates
+    can be considered invalid. This can happen
+    due to a variety of reasons.
+    """
+    return np.where(
+        np.isfinite(a),
+        np.where(
+            (a >= 0) & (a < max_rate),
+            a,
+            np.nan
+        ),
+        np.nan
+    )
