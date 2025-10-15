@@ -5,6 +5,9 @@
 ## Contents of this page
 1. [Background](#1-background)
 2. [The dataset](#2-the-dataset)
+    1. [Data access](#21-data-access)
+    2. [Reading RoA data](#22-reading-roa-data)
+    3. [Dataset content](#23-dataset-content)
 3. [How to use the data](#3-how-to-use-the-data)
 4. [The code](#4-the-code)
     1. [How the public dataset is produced](#41-how-the-public-dataset-is-produced)
@@ -26,6 +29,8 @@ We found that RoA estimates show good agreement with estimates from dedicated pr
 
 We use the term RoA not only to refer to the code that creates the precipitation estimates (detailed [in this section](#4-the-code)), but also for an existing dataset.
 
+## 2.1. Data access
+
 We are offering many years of RoA precipitation estimates through the Registry of Open Data on AWS at the following address: .
 
 The data is stored as Zarr files in the following structure (note that `roa` is a placeholder bucket here):
@@ -41,6 +46,46 @@ s3://roa/
 We create one Zarr file per year and follow the pattern `roa_YYYY.zarr`. We are processing the data in batches.
 
 If you need to explore further the directory tree, you can use the [AWS CLI](https://github.com/aws/aws-cli) or [fsspec's s3fs](https://github.com/fsspec/s3fs).
+
+## 2.2. Reading RoA data
+
+We recommend using [Xarray](https://docs.xarray.dev/en/stable/) with [s3fs](https://github.com/fsspec/s3fs). It is as simple as
+```python
+import xarray as xr
+
+ds = xr.open_zarr(
+    's3://roa/data/roa_2024.zarr',
+    chunks=None,
+    storage_options={"anon": True},
+)
+
+# Select an arbitrary timestamp
+ds_sel = ds.isel(sensing_end=19523)
+
+print(ds_sel)
+```
+```python
+<xarray.Dataset> Size: 74MB
+Dimensions:         (sensing_end: 1, y: 2688, x: 2304, quantile_level: 2)
+Coordinates:
+  * sensing_end     (sensing_end) datetime64[ns] 8B 2024-07-21T08:57:42.045000
+  * y               (y) float64 22kB -4.033e+06 -4.03e+06 ... 4.027e+06 4.03e+06
+  * x               (x) float64 18kB 4.783e+06 4.78e+06 ... -2.127e+06
+  * quantile_level  (quantile_level) float64 16B 0.16 0.84
+Data variables:
+    meteosat        (sensing_end) uint8 1B ...
+    y_hat_mu        (sensing_end, y, x) float32 25MB ...
+    y_hat_tau       (sensing_end, quantile_level, y, x) float32 50MB ...
+    acq_time        (sensing_end, y) datetime64[ns] 22kB ..
+```
+```python
+# Load it to memory, i.e. transfer the data from AWS
+ds_sel = ds_sel.compute()
+```
+
+More examples follow in the section [how to use the data](#3-how-to-use-the-data).
+
+## 2.3. Dataset content
 
 The variables in the dataset follow the [Climate and Forecast metadata conventions](https://en.wikipedia.org/wiki/Climate_and_Forecast_Metadata_Conventions). In any case, the table below compiles the meaning of each variable found in the input dataset.
 
@@ -67,7 +112,7 @@ We recommend to use Python and [Xarray](https://docs.xarray.dev/en/stable) to wo
 
 - Compute the average precipitation in 2023, for every point in the grid
 
-- Compute daily accumulations for 2023, for every point in the grid
+- Compute daily accumulations for 2023 for a specific location
 
 - Reproduce the RoA diurnal cycles in fig. 2a from [Amell et al. (2025)](https://doi.org/10.1029/2025JD044595) 
 
@@ -99,7 +144,7 @@ ds_mean = ds.mean(dim='sensing_end')
 # until we do ds_mean.compute()
 
 # If we want to know the average precipitation at, for example,
-# 0 °N and 0 °E for 2023, we then first need to find what `x` and `y`
+# 0 °N and 0 °E (AKA the Null Island) for 2023, we then first need to find what `x` and `y`
 # values are closest to the Null Island
 roa_proj = Proj(
     '+proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +rf=295.488065897001 +units=m +no_defs +type=crs'
@@ -111,6 +156,36 @@ ds_mean_at_null_island = ds_mean.sel(x=x, y=y, method='nearest')
 # We now trigger computation
 ds_mean_at_null_island = ds_mean_at_null_island.compute()
 print(ds_mean_at_null_island)
+```
+```python
+TBC
+```
+```python
+# Let's compute the daily accumulations at the Null Island
+# by integrating the rain rates
+# To make this explicit, we will iterate through each day of the year
+# and use some tricks with time
+sensing_end_floored = ds.sensing_end.dt.floor('D').data
+days_of_year = np.unique(sensing_end_floored)
+ds_null_island = ds.sel(x=x, y=y, method='nearest')
+daily_accumulations_at_null_island = np.full(days_of_year.size, np.nan)
+for i, d in enumerate(days_of_year):
+    ds_null_island_day_d = ds_null_island.sel(
+        sensing_end=(sensing_end_floored == d)
+    )
+    # We extract the time as datetime64[ns] but convert it to an float representation
+    time = ds_null_island_day_d.sensing_end.astype('datetime64[ns]').astype(int)
+    y_hat = ds_null_island_day_d.y_hat_mu.data
+    finite_mask = np.isfinite(y_hat) # In case there's any invalid value
+    daily_accumulations_at_null_island[i] = np.trapz(
+        y_hat[finite_mask],
+        # Below we divide by 3_600 x 10^9 to convert the nanosecond
+        # representation to a fractional hour representation,
+        # i.e. np.diff(time / 3600e9) is hours (used internally)
+        time / (3600e9)
+    )
+
+print(daily_accumulations_at_null_island)
 ```
 ```python
 TBC
