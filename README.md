@@ -37,10 +37,10 @@ The data is stored as Zarr files in the following structure:
 ```
 s3://roa/
 ├── README.txt
-└── data
+└── data/
     ⋮
-    ├── roa_2023.zarr
-    └── roa_2024.zarr
+    ├── roa_2023.zarr/
+    └── roa_2024.zarr/
 ```
 
 We create one Zarr file per year and follow the pattern `roa_YYYY.zarr`. We are processing the data in batches.
