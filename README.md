@@ -33,7 +33,7 @@ We use the term RoA not only to refer to the code that creates the precipitation
 
 We are offering many years of RoA precipitation estimates through the Registry of Open Data on AWS at the following address: .
 
-The data is stored as Zarr files in the following structure (note that `roa` is a placeholder bucket here):
+The data is stored as Zarr files in the following structure:
 ```
 s3://roa/
 ├── README.txt
@@ -116,7 +116,7 @@ We recommend to use Python and [Xarray](https://docs.xarray.dev/en/stable) to wo
 
 - Reproduce the RoA diurnal cycles in fig. 2a from [Amell et al. (2025)](https://doi.org/10.1029/2025JD044595) 
 
-We will use the the data stored in the [AWS S3 bucket](update link). For this, we will also need to have [fsspec's s3fs](https://github.com/fsspec/s3fs) installed. In this example, we are using Zarr version 3.1.3 (there are important differences between Zarr 2 and 3, see the [migration guide](https://zarr.readthedocs.io/en/main/user-guide/v3_migration)).
+We will use the the data stored in the [AWS S3 bucket](https://registry.opendata.aws/roa). For this, we will also need to have [fsspec's s3fs](https://github.com/fsspec/s3fs) installed. In this example, we are using Zarr version 3.1.3 (there are important differences between Zarr 2 and 3, see the [migration guide](https://zarr.readthedocs.io/en/main/user-guide/v3_migration)).
 
 ```python
 # Import libraries
@@ -125,9 +125,8 @@ from pyproj import Proj
 import xarray as xr
 
 # Open the data
-bucket = 'theRoAbucket'
 ds = xr.open_zarr(
-    f's3://{bucket}/data/roa_2023.zarr',
+    f's3://roa/data/roa_2023.zarr',
     chunks=None,
     storage_options={"anon": True}
 )
@@ -315,6 +314,8 @@ For a walkthrough of a complete retrieval, check [`docs/example.ipynb`](docs/exa
 ## 5. How to cite
 
 Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, 130*, e2025JD044595. https://doi.org/10.1029/2025JD044595
+
+If you also used data from the Registry of Open Data on AWS, consider using the statement "RoA data was accessed on [DATE] at registry.opendata.aws/roa"
 
 ## Acknowledgments
 
