@@ -28,7 +28,7 @@ We use the term RoA not only to refer to the code that creates the precipitation
 
 We are offering many years of RoA precipitation estimates through the Registry of Open Data on AWS at the following address: .
 
-The data is stored as Zarr files in the following structure:
+The data is stored as Zarr files in the following structure (note that `roa` is a placeholder bucket here):
 ```
 s3://roa/
 ├── README.txt
@@ -38,9 +38,11 @@ s3://roa/
     └── roa_2024.zarr
 ```
 
-We create one Zarr file per year. We are processing the data in batches.
+We create one Zarr file per year and follow the pattern `roa_YYYY.zarr`. We are processing the data in batches.
 
-The variables follow the [Climate and Forecast metadata conventions](https://en.wikipedia.org/wiki/Climate_and_Forecast_Metadata_Conventions). In any case, the table below compiles the meaning of each variable found in the input dataset.
+If you need to explore further the directory tree, you can use the [AWS CLI](https://github.com/aws/aws-cli) or [fsspec's s3fs](https://github.com/fsspec/s3fs).
+
+The variables in the dataset follow the [Climate and Forecast metadata conventions](https://en.wikipedia.org/wiki/Climate_and_Forecast_Metadata_Conventions). In any case, the table below compiles the meaning of each variable found in the input dataset.
 
 | Variable | Meaning |
 |--|--|
@@ -58,6 +60,8 @@ Note that the data is offered on a projected Cartesian grid (`x` and `y`, rather
 ```
 
 ## 3. How to use the data
+
+Note: The outputs with `TBC` will be updated once the data is in AWS.
 
 We recommend to use Python and [Xarray](https://docs.xarray.dev/en/stable) to work with the data. In the example below, we show how we can:
 
