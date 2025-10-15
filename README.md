@@ -172,7 +172,7 @@ for i, d in enumerate(days_of_year):
     ds_null_island_day_d = ds_null_island.sel(
         sensing_end=(sensing_end_floored == d)
     )
-    # We extract the time as datetime64[ns] but convert it to an float representation
+    # We extract the time as an integer representation of datetime64[ns]
     time = ds_null_island_day_d.sensing_end.astype('datetime64[ns]').astype(int)
     y_hat = ds_null_island_day_d.y_hat_mu.data
     finite_mask = np.isfinite(y_hat) # In case there's any invalid value
@@ -181,7 +181,8 @@ for i, d in enumerate(days_of_year):
         # Below we divide by 3_600 x 10^9 to convert the nanosecond
         # representation to a fractional hour representation,
         # i.e. np.diff(time / 3600e9) is hours (used internally)
-        time / (3600e9)
+        # This matches the units of y_hat, as it is given in mm/h
+        time / 3600e9
     )
 
 print(daily_accumulations_at_null_island)
