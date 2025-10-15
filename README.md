@@ -26,7 +26,7 @@ We found that RoA estimates show good agreement with estimates from dedicated pr
 
 We use the term RoA not only to refer to the code that creates the precipitation estimates (detailed [in this section](#4-the-code)), but also for an existing dataset.
 
-We are offering many years of RoA precipitation estimates through the Registry of Open Data on AWS at the following address: https://registry.opendata.aws/roa.
+We are offering many years of RoA precipitation estimates through the Registry of Open Data on AWS at the following address: .
 
 The data is stored as Zarr files in the following structure:
 ```
@@ -38,9 +38,10 @@ s3://roa/
     └── roa_2024.zarr
 ```
 
+We create one Zarr file per year. We are processing the data in batches.
+
 The variables follow the [Climate and Forecast metadata conventions](https://en.wikipedia.org/wiki/Climate_and_Forecast_Metadata_Conventions). In any case, the table below compiles the meaning of each variable found in the input dataset.
 
-However, the table below compiles the meaning of each variable:
 | Variable | Meaning |
 |--|--|
 |`sensing_end` | stop acquisition time of the full Earth disc |
@@ -51,14 +52,122 @@ However, the table below compiles the meaning of each variable:
 | `y_hat_tau` | Precipitation quantile (at level `tau = quantile_level`) |
 | `acq_time` | Timestamp of the satellite scanline |
 
-Note that the data is offered on a projected Cartesian grid (`x` and `y`, rather than longitude and latitude). IT corresponds to the native Meteosat (Second Generation) grid, and the following PROJ string describes the projection:
+Note that the data is offered on a projected Cartesian grid (`x` and `y`, rather than longitude and latitude). It corresponds to the native Meteosat (Second Generation) grid. The following [PROJ string](https://proj.org/) describes the projection:
 ```
 +proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +rf=295.488065897001 +units=m +no_defs +type=crs
 ```
 
 ## 3. How to use the data
 
-This is to be completed
+We recommend to use Python and [Xarray](https://docs.xarray.dev/en/stable) to work with the data. In the example below, we show how we can:
+
+- Compute the average precipitation in 2023, for every point in the grid
+
+- Compute daily accumulations for 2023, for every point in the grid
+
+- Reproduce the RoA diurnal cycles in fig. 2a from [Amell et al. (2025)](https://doi.org/10.1029/2025JD044595) 
+
+We will use the the data stored in the [AWS S3 bucket](update link). For this, we will also need to have [fsspec's s3fs](https://github.com/fsspec/s3fs) installed. In this example, we are using Zarr version 3.1.3 (there are important differences between Zarr 2 and 3, see the [migration guide](https://zarr.readthedocs.io/en/main/user-guide/v3_migration)).
+
+```python
+# Import libraries
+import numpy as np
+from pyproj import Proj
+import xarray as xr
+
+# Open the data
+bucket = 'theRoAbucket'
+ds = xr.open_zarr(
+    f's3://{bucket}/data/roa_2023.zarr',
+    chunks=None,
+    storage_options={"anon": True}
+)
+ds.head()
+```
+```python
+TBC
+```
+```python
+# We can now compute the average for all of 2023, as simple as
+ds_mean = ds.mean(dim='sensing_end')
+
+# It will, however, only build a graph and not compute anything
+# until we do ds_mean.compute()
+
+# If we want to know the average precipitation at, for example,
+# 0 °N and 0 °E for 2023, we then first need to find what `x` and `y`
+# values are closest to the Null Island
+roa_proj = Proj(
+    '+proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +rf=295.488065897001 +units=m +no_defs +type=crs'
+)
+x, y = roa_proj.transform(0, 0)
+
+ds_mean_at_null_island = ds_mean.sel(x=x, y=y, method='nearest')
+
+# We now trigger computation
+ds_mean_at_null_island = ds_mean_at_null_island.compute()
+print(ds_mean_at_null_island)
+```
+```python
+TBC
+```
+```python
+# We now want to compute the blue curve in fig. 2a from Amell et al. (2025)
+# https://doi.org/10.1029/2025JD044595
+#
+# However, ds is in `x` and `y`, but we want to consider only the extent
+# 20 - 25 °N and 0 - 5 °E
+#
+# The simplest is to extract a mask, as done below
+xx, yy = np.broadcast_arrays(
+    ds.x.data.reshape(1, -1),
+    ds.y.data.reshape(-1, 1)
+)
+
+lon_xx, lat_yy = proj.transform(
+    xx, yy,
+    direction='INVERSE'
+)
+
+mask_lon = xr.DataArray(
+    (0 <= lon_xx) & (lon_xx <= 5),
+    coords={'y': ds.y, 'x': ds.x}
+)
+mask_lat = xr.DataArray(
+    (20 <= lat_yy) & (lat_yy <= 25),
+    coords={'y': ds.y, 'x': ds.x}
+)
+
+# We then select the June, July, and August months
+ds_jja = ds.sel(sensing_end=slice('2023-06', '2023-08'))
+
+# Before computing, we select only a subset of the data, to decrease the computational footprint
+mask_x_crop = (mask == False).all('y') == False
+mask_y_crop = (mask == False).all('x') == False
+mask_cropped = mask.sel(x=mask_x_crop, y=mask_y_crop)
+
+ds_jja_cropped = ds.sel(x=mask_x_crop, y=mask_y_crop)
+
+# We now mask `ds_jja_cropped` to only pixels inside the designated area
+ds_jja_cropped = ds_jja_cropped.where(mask_cropped)
+
+# select `y_hat_mu`, the relevant variable
+y_hat_mu_jja_cropped = ds_jja_cropped.sel(
+    x=mask_x_crop, y=mask_y_crop
+)
+
+# and compute the mean in each 30 time bin, by using
+# some tricks with time
+y_hat_mu_jja_cropped_30min_mean['minute_of_day'] = xr.DataArray(
+    minute_of_day,
+    coords={'sensing_end', ds_jja_cropped.sensing_end}
+)
+y_hat_mu_jja_cropped_30min_mean = y_hat_mu_jja_cropped.groupby('minute_of_day').compute()
+print(y_hat_mu_jja_cropped_30min_mean)
+```
+```
+TBC
+```
 
 ## 4. The code
 
@@ -126,7 +235,7 @@ For a walkthrough of a complete retrieval, check [`docs/example.ipynb`](docs/exa
 
 ## 5. How to cite
 
-TBC
+Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, 130*, e2025JD044595. https://doi.org/10.1029/2025JD044595
 
 ## Acknowledgments
 
@@ -138,4 +247,4 @@ We would like to acknowledge:
 
 - The European Union’s HORIZON Research and Innovation Programme under grant agreement no. 101120657, project [ENFIELD](https://enfield-project.eu) (European Lighthouse to Manifest Trustworthy and Green AI).
 
-- The [AWS Open Data Sponsorship Program](https://aws.amazon.com/opendata/open-data-sponsorship-program)
+- The [AWS Open Data Sponsorship Program](https://aws.amazon.com/opendata/open-data-sponsorship-program).
