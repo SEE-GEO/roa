@@ -1,6 +1,6 @@
 # Rain over Africa
 
-**Publication**: Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, 130*, e2025JD044595. https://doi.org/10.1029/2025JD044595
+**Publication**: Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, (check soon for the volume number)*, e2025JD044595. https://doi.org/10.1029/2025JD044595
 
 ## Contents of this page
 1. [Background](#1-background)
@@ -314,7 +314,7 @@ For a walkthrough of a complete retrieval, check [`docs/example.ipynb`](docs/exa
 
 ## 5. How to cite
 
-Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, 130*, e2025JD044595. https://doi.org/10.1029/2025JD044595
+Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, (check soon for the volume number)*, e2025JD044595. https://doi.org/10.1029/2025JD044595
 
 If you also used data from the Registry of Open Data on AWS, consider using the statement "RoA data was accessed on [DATE] at registry.opendata.aws/roa"
 
