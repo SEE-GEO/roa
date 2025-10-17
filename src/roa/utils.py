@@ -2,6 +2,7 @@ import contextlib
 import pickle
 import warnings
 
+from array_api_compat import array_namespace
 import numpy as np
 from pyresample.geometry import AreaDefinition
 from pyresample.kd_tree import resample_nearest
@@ -179,7 +180,7 @@ class VaryZerosLog(VaryZeros):
         return super().invert(torch.exp(sample))
     
 def mask_invalid_rates(
-    a: np.ndarray,
+    a: np.ndarray | torch.Tensor,
     max_rate: float = 1e2,
 ):
     """
@@ -187,12 +188,13 @@ def mask_invalid_rates(
     can be considered invalid. This can happen
     due to a variety of reasons.
     """
-    return np.where(
-        np.isfinite(a),
-        np.where(
+    xp = array_namespace(a)
+    return xp.where(
+        xp.isfinite(a),
+        xp.where(
             (a >= 0) & (a < max_rate),
             a,
-            np.nan
+            xp.nan
         ),
-        np.nan
+        xp.nan
     )

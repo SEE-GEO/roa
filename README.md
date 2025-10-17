@@ -1,6 +1,6 @@
 # Rain over Africa
 
-**Publication**: Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, (check soon for the volume number)*, e2025JD044595. https://doi.org/10.1029/2025JD044595
+**Publication**: Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, 30*, e2025JD044595. https://doi.org/10.1029/2025JD044595
 
 ## Contents of this page
 1. [Background](#1-background)
@@ -35,7 +35,7 @@ We are offering many years of RoA precipitation estimates through the Registry o
 
 The data is stored as Zarr files in the following structure:
 ```
-s3://roa/
+s3://rainoverafrica/
 ├── README.txt
 └── data/
     ⋮
@@ -54,29 +54,38 @@ We recommend using [Xarray](https://docs.xarray.dev/en/stable/) with [s3fs](http
 import xarray as xr
 
 ds = xr.open_zarr(
-    's3://roa/data/roa_2024.zarr',
+    's3://rainoverafrica/data/roa_2024.zarr',
     chunks=None,
     storage_options={"anon": True},
 )
 
 # Select an arbitrary timestamp
-ds_sel = ds.isel(sensing_end=19523)
+ds_sel = ds.isel(sensing_end=0)
 
 print(ds_sel)
 ```
 ```python
-<xarray.Dataset> Size: 74MB
-Dimensions:         (sensing_end: 1, y: 2688, x: 2304, quantile_level: 2)
+<xarray.Dataset> Size: 248MB
+Dimensions:         (time: 1, y: 2688, x: 2304, quantile_level: 7)
 Coordinates:
-  * sensing_end     (sensing_end) datetime64[ns] 8B 2024-07-21T08:57:42.045000
-  * y               (y) float64 22kB -4.033e+06 -4.03e+06 ... 4.027e+06 4.03e+06
+  * quantile_level  (quantile_level) float64 56B 0.05 0.16 0.25 ... 0.84 0.95
+  * time            (time) datetime64[ns] 8B 2024-01-01T00:12:43.688000
   * x               (x) float64 18kB 4.783e+06 4.78e+06 ... -2.127e+06
-  * quantile_level  (quantile_level) float64 16B 0.16 0.84
+  * y               (y) float64 22kB -4.033e+06 -4.03e+06 ... 4.027e+06 4.03e+06
 Data variables:
-    meteosat        (sensing_end) uint8 1B ...
-    y_hat_mu        (sensing_end, y, x) float32 25MB ...
-    y_hat_tau       (sensing_end, quantile_level, y, x) float32 50MB ...
-    acq_time        (sensing_end, y) datetime64[ns] 22kB ..
+    acq_time        (time, y) datetime64[ns] 22kB dask.array<chunksize=(1, 2688), meta=np.ndarray>
+    latitude        (y, x) float32 25MB dask.array<chunksize=(336, 576), meta=np.ndarray>
+    longitude       (y, x) float32 25MB dask.array<chunksize=(336, 576), meta=np.ndarray>
+    platform        (time) <U11 44B dask.array<chunksize=(1,), meta=np.ndarray>
+    y_hat_mu        (time, y, x) float32 25MB dask.array<chunksize=(1, 336, 576), meta=np.ndarray>
+    y_hat_tau       (time, quantile_level, y, x) float32 173MB dask.array<chunksize=(1, 1, 672, 576), meta=np.ndarray>
+Attributes:
+    comment:      The attributes are based on the CF Conventions version 1.12...
+    institution:  Chalmers University of Technology
+    projection:   +proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +r...
+    references:   Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025)...
+    source:       Meteosat data processed with the `roa` library (version 0.3...
+    title:        Rain over Africa
 ```
 ```python
 # Load it to memory, i.e. transfer the data from AWS
@@ -91,22 +100,23 @@ The variables in the dataset follow the [Climate and Forecast metadata conventio
 
 | Variable | Meaning |
 |--|--|
-|`sensing_end` | stop acquisition time of the full Earth disc |
+|`time` | end of the observation of the full Earth disc |
 |`x` and `y` | coordinates, see note below |
 |`quantile_level` | precipitation quantile level (relates to uncertainty) |
-| `meteosat` | Source of the input image |
+| `platform` | Source of the input image |
 | `y_hat_mu` | Expected rain rate |
 | `y_hat_tau` | Precipitation quantile (at level `tau = quantile_level`) |
-| `acq_time` | Timestamp of the satellite scanline |
+| `acq_time` | Mean timestamp of the satellite scanline |
+| `latitude` and `longitude` | lat and lon corresponding to the (`x`,`y`) coordinates |
 
-Note that the data is offered on a projected Cartesian grid (`x` and `y`, rather than longitude and latitude). It corresponds to the native Meteosat (Second Generation) grid. The following [PROJ string](https://proj.org/) describes the projection:
+Note that the data is provided on a projected Cartesian grid (`x` and `y`, rather than longitude and latitude). It corresponds to the native Meteosat (Second Generation) grid. The following [PROJ string](https://proj.org/) describes the projection:
 ```
 +proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +rf=295.488065897001 +units=m +no_defs +type=crs
 ```
 
 ## 3. How to use the data
 
-Note: The outputs with `TBC` will be updated once the data is in AWS.
+Note: The outputs with `TBC` and the examples will be updated once the data is in AWS.
 
 We recommend to use Python and [Xarray](https://docs.xarray.dev/en/stable) to work with the data. In the example below, we show how we can:
 
@@ -126,7 +136,7 @@ import xarray as xr
 
 # Open the data
 ds = xr.open_zarr(
-    f's3://roa/data/roa_2023.zarr',
+    f's3://rainoverafrica/data/roa_2023.zarr',
     chunks=None,
     storage_options={"anon": True}
 )
@@ -267,7 +277,7 @@ With
 
 - a data directory at `/data/roa`,
 
-- a 40 GiB NVIDIA A100 GPU to run inference,
+- a 8 GiB NVIDIA Quadro RTX 4000 GPU to run inference,
 
 - and EUMETSAT Data Store credentials saved in `~/.eumdac/credentials`,
 
@@ -286,14 +296,17 @@ Note that some downloads can fail, so it is best to assert that all expected obs
 Afterwards, we run inference with
 ```
 $ apptainer run --nv --bind /data/roa:/data ~/roa.sif \
-    python /roa/scripts/inference_cf.py \
+    python /roa/scripts/inference_aws.py \
         --model /roa/data/network_CPU.pt \
         --input /data/MSG_data_2024.zarr \
         --output /data/roa_2024.zarr \
-        --bs 256 \
-        --quantiles 0.16 0.84
+        --bs 100 \
+        --quantiles 0.05 0.16 0.25 0.50 0.75 0.84 0.95 \
+        --small_gpu
 ```
 and that's it!
+
+Note that different GPUs can introduce numerical differences when comparing to inference on CPUs.
 
 ### 4.2. How to produce your own precipitation estimates
 
@@ -314,7 +327,7 @@ For a walkthrough of a complete retrieval, check [`docs/example.ipynb`](docs/exa
 
 ## 5. How to cite
 
-Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, (check soon for the volume number)*, e2025JD044595. https://doi.org/10.1029/2025JD044595
+Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near‐real‐time retrievals of Rain over Africa using deep learning. *Journal of Geophysical Research: Atmospheres, 130*, e2025JD044595. https://doi.org/10.1029/2025JD044595
 
 If you also used data from the Registry of Open Data on AWS, consider using the statement "RoA data was accessed on [DATE] at registry.opendata.aws/roa"
 
