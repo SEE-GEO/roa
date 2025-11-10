@@ -173,7 +173,7 @@ class CFConventions:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', required=True)
-    parser.add_argument('--input', required=True)
+    parser.add_argument('--input', required=True, nargs='+')
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--left_index_fraction', type=float, default=0)
     parser.add_argument('--right_index_fraction', type=float, default=1)
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     )
 
     # Open input data (force coordinate to be `nat_file` for compatibility with posterior projects)
-    ds_input = xr.open_zarr(args.input).rename({args.file_dim: 'nat_file'})
+    ds_input = xr.concat([xr.open_zarr(f) for f in args.input], dim=args.file_dim).rename({args.file_dim: 'nat_file'})
     ds_input = ds_input.drop_duplicates('nat_file')
 
     # Sort by end observation time
