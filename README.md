@@ -13,7 +13,7 @@
     1. [How the public dataset is produced](#41-how-the-public-dataset-is-produced)
     2. [How to produce your own precipitation estimates](#42-how-to-produce-your-own-precipitation-estimates)
 5. [How to cite](#5-how-to-cite)
-6. [Acknowledgmenets](#6-acknowledgements)
+6. [Acknowledgements](#6-acknowledgements)
 
 ## 1. Background
 
@@ -31,7 +31,7 @@ We use the term RoA not only to refer to the code that creates the precipitation
 
 ## 2.1. Data access
 
-We are offering many years of RoA precipitation estimates through the Registry of Open Data on AWS at the following address: .
+We are offering many years of RoA precipitation estimates via the Registry of Open Data on AWS at the following address: https://registry.opendata.aws/roa.
 
 The data is stored as Zarr files in the following structure:
 ```
@@ -60,31 +60,31 @@ ds = xr.open_zarr(
 )
 
 # Select an arbitrary timestamp
-ds_sel = ds.isel(sensing_end=0)
+ds_sel = ds.isel(time=0)
 
 print(ds_sel)
 ```
-```python
+```
 <xarray.Dataset> Size: 248MB
-Dimensions:         (time: 1, y: 2688, x: 2304, quantile_level: 7)
+Dimensions:         (y: 2688, x: 2304, quantile_level: 7)
 Coordinates:
-  * quantile_level  (quantile_level) float64 56B 0.05 0.16 0.25 ... 0.84 0.95
-  * time            (time) datetime64[ns] 8B 2024-01-01T00:12:43.688000
-  * x               (x) float64 18kB 4.783e+06 4.78e+06 ... -2.127e+06
   * y               (y) float64 22kB -4.033e+06 -4.03e+06 ... 4.027e+06 4.03e+06
+  * x               (x) float64 18kB 4.783e+06 4.78e+06 ... -2.127e+06
+  * quantile_level  (quantile_level) float64 56B 0.05 0.16 0.25 ... 0.84 0.95
+    time            datetime64[ns] 8B 2024-01-01T00:12:43.688000
 Data variables:
-    acq_time        (time, y) datetime64[ns] 22kB dask.array<chunksize=(1, 2688), meta=np.ndarray>
+    acq_time        (y) datetime64[ns] 22kB dask.array<chunksize=(2688,), meta=np.ndarray>
     latitude        (y, x) float32 25MB dask.array<chunksize=(336, 576), meta=np.ndarray>
     longitude       (y, x) float32 25MB dask.array<chunksize=(336, 576), meta=np.ndarray>
-    platform        (time) <U11 44B dask.array<chunksize=(1,), meta=np.ndarray>
-    y_hat_mu        (time, y, x) float32 25MB dask.array<chunksize=(1, 336, 576), meta=np.ndarray>
-    y_hat_tau       (time, quantile_level, y, x) float32 173MB dask.array<chunksize=(1, 1, 672, 576), meta=np.ndarray>
+    platform        <U11 44B dask.array<chunksize=(), meta=np.ndarray>
+    y_hat_mu        (y, x) float32 25MB dask.array<chunksize=(336, 576), meta=np.ndarray>
+    y_hat_tau       (quantile_level, y, x) float32 173MB dask.array<chunksize=(1, 672, 576), meta=np.ndarray>
 Attributes:
     comment:      The attributes are based on the CF Conventions version 1.12...
     institution:  Chalmers University of Technology
     projection:   +proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +r...
     references:   Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025)...
-    source:       Meteosat data processed with the `roa` library (version 0.3...
+    source:       Meteosat data processed with the `roa` library (version 0.0...
     title:        Rain over Africa
 ```
 ```python
@@ -116,8 +116,6 @@ Note that the data is provided on a projected Cartesian grid (`x` and `y`, rathe
 
 ## 3. How to use the data
 
-Note: The outputs with `TBC` and the examples will be updated once the data is in AWS.
-
 We recommend to use Python and [Xarray](https://docs.xarray.dev/en/stable) to work with the data. In the example below, we show how we can:
 
 - Compute the average precipitation in 2023, for every point in the grid
@@ -126,136 +124,203 @@ We recommend to use Python and [Xarray](https://docs.xarray.dev/en/stable) to wo
 
 - Reproduce the RoA diurnal cycles in fig. 2a from [Amell et al. (2025)](https://doi.org/10.1029/2025JD044595) 
 
-We will use the the data stored in the [AWS S3 bucket](https://registry.opendata.aws/roa). For this, we will also need to have [fsspec's s3fs](https://github.com/fsspec/s3fs) installed. In this example, we are using Zarr version 3.1.3 (there are important differences between Zarr 2 and 3, see the [migration guide](https://zarr.readthedocs.io/en/main/user-guide/v3_migration)).
+We will use the the data stored in the [AWS S3 bucket](https://registry.opendata.aws/roa). For this, we will also need to have [fsspec's s3fs](https://github.com/fsspec/s3fs) installed. In this example, we are using Zarr version 3.1.3 (there are important differences between Zarr 2 and 3, see the [migration guide](https://zarr.readthedocs.io/en/main/user-guide/v3_migration)). We will also run the code using a small computer, a 2-CPU and 8-GB m7i-flex AWS EC2 free tier instance.
 
 ```python
 # Import libraries
+from dask.diagnostics import ProgressBar
 import numpy as np
-from pyproj import Proj
 import xarray as xr
 
 # Open the data
 ds = xr.open_zarr(
     f's3://rainoverafrica/data/roa_2023.zarr',
-    chunks=None,
     storage_options={"anon": True}
 )
 ds.head()
 ```
-```python
-TBC
+```
+<xarray.Dataset> Size: 4kB
+Dimensions:         (time: 5, y: 5, x: 5, quantile_level: 5)
+Coordinates:
+  * time            (time) datetime64[ns] 40B 2023-01-01T00:12:43.100000 ... ...
+  * y               (y) float64 40B -4.033e+06 -4.03e+06 ... -4.021e+06
+  * x               (x) float64 40B 4.783e+06 4.78e+06 ... 4.774e+06 4.771e+06
+  * quantile_level  (quantile_level) float64 40B 0.05 0.16 0.25 0.5 0.75
+Data variables:
+    acq_time        (time, y) datetime64[ns] 200B dask.array<chunksize=(1, 5), meta=np.ndarray>
+    latitude        (y, x) float32 100B dask.array<chunksize=(5, 5), meta=np.ndarray>
+    longitude       (y, x) float32 100B dask.array<chunksize=(5, 5), meta=np.ndarray>
+    platform        (time) <U11 220B dask.array<chunksize=(1,), meta=np.ndarray>
+    y_hat_mu        (time, y, x) float32 500B dask.array<chunksize=(1, 5, 5), meta=np.ndarray>
+    y_hat_tau       (time, quantile_level, y, x) float32 2kB dask.array<chunksize=(1, 1, 5, 5), meta=np.ndarray>
+Attributes:
+    comment:      The attributes are based on the CF Conventions version 1.12...
+    institution:  Chalmers University of Technology
+    projection:   +proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +r...
+    references:   Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025)...
+    source:       Meteosat data processed with the `roa` library (version 0.0...
+    title:        Rain over Africa
 ```
 ```python
 # We can now compute the average for all of 2023, as simple as
-ds_mean = ds.mean(dim='sensing_end')
+ds_y_hat_mu_mean = ds.y_hat_mu.where((0<= ds.y_hat_mu) & (ds.y_hat_mu <= 200)).mean(dim='time')
 
 # It will, however, only build a graph and not compute anything
-# until we do ds_mean.compute()
+# until we do `ds_y_hat_mu_mean.compute()`
+# Also note that it's a safe practice to mask values below a certain threshold,
+# hence our use of .where((0<= ds.y_hat_mu) & (ds.y_hat_mu <= 200))
+# as they can be the result of numerical issues. See the note from section 4.1.
 
 # If we want to know the average precipitation at, for example,
 # 0 °N and 0 °E (AKA the Null Island) for 2023, we then first need to find what `x` and `y`
 # values are closest to the Null Island
-roa_proj = Proj(
-    '+proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +rf=295.488065897001 +units=m +no_defs +type=crs'
+# We can use the auxiliary variables `latitude` and `longitude` for this,
+# using an approximation by computing the Euclidean distance
+i_y, i_x = np.unravel_index(
+    (
+        abs(ds.latitude - 0)**2 + abs(ds.longitude - 0)**2
+    ).argmin().compute().item(),
+    ds.latitude.shape
 )
-x, y = roa_proj.transform(0, 0)
 
-ds_mean_at_null_island = ds_mean.sel(x=x, y=y, method='nearest')
+ds_y_hat_mu_mean_at_null_island = ds_y_hat_mu_mean.isel(y=i_y, x=i_x)
 
 # We now trigger computation
-ds_mean_at_null_island = ds_mean_at_null_island.compute()
-print(ds_mean_at_null_island)
+with ProgressBar():
+    ds_y_hat_mu_mean_at_null_island = ds_y_hat_mu_mean_at_null_island.compute()
+```
+```
+[########################################] | 100% Completed | 26m 10s
 ```
 ```python
-TBC
+print(ds_mean_at_null_island)
+```
+```
+<xarray.DataArray 'y_hat_mu' ()> Size: 4B
+array(0.13609327, dtype=float32)
+Coordinates:
+    x        float64 8B 0.0
+    y        float64 8B 0.0
+Attributes:
+    comment:        There can be negative values as well as outliers. These c...
+    description:    Expected value from the rain rate retrieval distribution.
+    long_name:      expected rain rate
+    projection:     +proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 ...
+    standard_name:  rainfall_rate
+    units:          mm h-1
 ```
 ```python
 # Let's compute the daily accumulations at the Null Island
 # by integrating the rain rates
 # To make this explicit, we will iterate through each day of the year
 # and use some tricks with time
-sensing_end_floored = ds.sensing_end.dt.floor('D').data
-days_of_year = np.unique(sensing_end_floored)
-ds_null_island = ds.sel(x=x, y=y, method='nearest')
-daily_accumulations_at_null_island = np.full(days_of_year.size, np.nan)
-for i, d in enumerate(days_of_year):
+ds_null_island = ds.isel(y=i_y, x=i_x)
+day_of_year = ds_null_island.time.dt.dayofyear.data
+day_of_year_unique = np.unique(day_of_year)
+daily_accumulations_at_null_island = np.full(
+    day_of_year_unique.size,
+    np.nan
+)
+print("Processing daily accumulations at the Null Island\n")
+for i, d in enumerate(day_of_year_unique):
+    print(f"Day {d}", end='\r')
     ds_null_island_day_d = ds_null_island.sel(
-        sensing_end=(sensing_end_floored == d)
+        time=(day_of_year == d)
     )
     # We extract the time as an integer representation of datetime64[ns]
-    time = ds_null_island_day_d.sensing_end.astype('datetime64[ns]').astype(int)
-    y_hat = ds_null_island_day_d.y_hat_mu.data
+    time = ds_null_island_day_d.time.astype('datetime64[ns]').astype(int).values
+    y_hat = ds_null_island_day_d.y_hat_mu.where(
+        (0 <= ds_null_island_day_d.y_hat_mu) &
+        (ds_null_island_day_d.y_hat_mu <= 200)
+    ).values
     finite_mask = np.isfinite(y_hat) # In case there's any invalid value
-    daily_accumulations_at_null_island[i] = np.trapz(
+    daily_accumulations_at_null_island[i] = np.trapezoid(
         y_hat[finite_mask],
         # Below we divide by 3_600 x 10^9 to convert the nanosecond
         # representation to a fractional hour representation,
         # i.e. np.diff(time / 3600e9) is hours (used internally)
         # This matches the units of y_hat, as it is given in mm/h
-        time / 3600e9
+        time[finite_mask] / 3600e9
     )
 
-print(daily_accumulations_at_null_island)
+# Show the first 5 accumulations
+print('\nFirst five daily accumulations:\n', daily_accumulations_at_null_island[:5])
 ```
-```python
-TBC
+```
+First five daily accumulations:
+ [0.10510297 0.63085772 1.39207075 4.37375558 0.54879636]
 ```
 ```python
 # We now want to compute the blue curve in fig. 2a from Amell et al. (2025)
 # https://doi.org/10.1029/2025JD044595
-#
-# However, ds is in `x` and `y`, but we want to consider only the extent
-# 20 - 25 °N and 0 - 5 °E
-#
-# The simplest is to extract a mask, as done below
-xx, yy = np.broadcast_arrays(
-    ds.x.data.reshape(1, -1),
-    ds.y.data.reshape(-1, 1)
-)
-
-lon_xx, lat_yy = proj.transform(
-    xx, yy,
-    direction='INVERSE'
-)
-
-mask_lon = xr.DataArray(
-    (0 <= lon_xx) & (lon_xx <= 5),
-    coords={'y': ds.y, 'x': ds.x}
-)
+# 
+# We want to consider only the extent 20 - 25 °N and 0 - 5 °E,
+# and we can make use of the auxiliary latitude and longitude variables
 mask_lat = xr.DataArray(
-    (20 <= lat_yy) & (lat_yy <= 25),
+    (20 <= ds.latitude) & (ds.latitude <= 25),
     coords={'y': ds.y, 'x': ds.x}
 )
+mask_lon = xr.DataArray(
+    (0 <= ds.longitude) & (ds.longitude <= 5),
+    coords={'y': ds.y, 'x': ds.x}
+)
+mask = mask_lat & mask_lon
 
-# We then select the June, July, and August months
-ds_jja = ds.sel(sensing_end=slice('2023-06', '2023-08'))
+# Select June, July, and August months
+ds_jja = ds.sel(time=slice('2023-06', '2023-08'))
 
-# Before computing, we select only a subset of the data, to decrease the computational footprint
-mask_x_crop = (mask == False).all('y') == False
-mask_y_crop = (mask == False).all('x') == False
-mask_cropped = mask.sel(x=mask_x_crop, y=mask_y_crop)
+# Crop to the mask, where NaNs will populate elements outside the area
+# .compute() required for the index
+ds_jja_cropped = ds_jja.where(mask.compute(), drop=True)
 
-ds_jja_cropped = ds.sel(x=mask_x_crop, y=mask_y_crop)
-
-# We now mask `ds_jja_cropped` to only pixels inside the designated area
-ds_jja_cropped = ds_jja_cropped.where(mask_cropped)
-
-# select `y_hat_mu`, the relevant variable
-y_hat_mu_jja_cropped = ds_jja_cropped.sel(
-    x=mask_x_crop, y=mask_y_crop
+# Select the relevant variable
+y_hat_mu_jja_cropped = ds_jja_cropped.y_hat_mu
+# Handle any possible conflicting value
+y_hat_mu_jja_cropped = y_hat_mu_jja_cropped.where(
+    (0 <= y_hat_mu_jja_cropped) & (y_hat_mu_jja_cropped <= 200)
 )
 
 # and compute the mean in each 30 time bin, by using
 # some tricks with time
-y_hat_mu_jja_cropped_30min_mean['minute_of_day'] = xr.DataArray(
-    minute_of_day,
-    coords={'sensing_end', ds_jja_cropped.sensing_end}
+y_hat_mu_jja_cropped['minute_of_day'] = y_hat_mu_jja_cropped.time.dt.floor('30min').pipe(lambda x: x.dt.hour * 60 + x.dt.minute)
+y_hat_mu_jja_cropped = y_hat_mu_jja_cropped.swap_dims({'time': 'minute_of_day'}).drop_vars('time')
+y_hat_mu_jja_cropped_30min_mean = y_hat_mu_jja_cropped.groupby(
+    'minute_of_day'
+).mean(
+    ['minute_of_day', 'x', 'y']
 )
-y_hat_mu_jja_cropped_30min_mean = y_hat_mu_jja_cropped.groupby('minute_of_day').compute()
+
+with ProgressBar():
+    y_hat_mu_jja_cropped_30min_mean = y_hat_mu_jja_cropped_30min_mean.compute()
+```
+```
+[########################################] | 100% Completed | 266.23 s
+```
+```python
 print(y_hat_mu_jja_cropped_30min_mean)
 ```
 ```
-TBC
+<xarray.DataArray 'y_hat_mu' (minute_of_day: 48)> Size: 192B
+array([0.03006615, 0.02757636, 0.02362311, 0.02234554, 0.02091054,
+       0.01890199, 0.01593699, 0.01270751, 0.01106855, 0.00951752,
+       0.00843452, 0.00691009, 0.00584777, 0.00527937, 0.00428771,
+       0.00387396, 0.00305142, 0.00227556, 0.00178786, 0.00121699,
+       0.00087936, 0.00063457, 0.00056154, 0.00068697, 0.00151117,
+       0.00427322, 0.00925402, 0.01717995, 0.02930276, 0.04330863,
+       0.05582752, 0.06514046, 0.07072729, 0.07282268, 0.07208262,
+       0.06770573, 0.06500953, 0.06011817, 0.05709378, 0.052485  ,
+       0.04922819, 0.04561045, 0.04238486, 0.03960717, 0.03687198,
+       0.03620769, 0.03495797, 0.03342935], dtype=float32)
+Coordinates:
+  * minute_of_day  (minute_of_day) int64 384B 0 30 60 90 ... 1320 1350 1380 1410
+Attributes:
+    comment:        There can be negative values as well as outliers. These c...
+    description:    Expected value from the rain rate retrieval distribution.
+    long_name:      expected rain rate
+    projection:     +proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 ...
+    standard_name:  rainfall_rate
+    units:          mm h-1
 ```
 
 ## 4. The code
@@ -267,7 +332,7 @@ Note that the RoA code is research code and can be affected by future updates in
 
 ### 4.1. How the public dataset is produced
 
-We use the [Apptainer container](https://apptainer.org/docs/admin/main/installation.html) we uploaded to [this Zenodo record](https://doi.org/10.5281/zenodo.17193911).
+We use the [Apptainer container](https://apptainer.org/docs/admin/main/installation.html) we uploaded to [this Zenodo record](https://doi.org/10.5281/zenodo.17193911). The `roa` library in the container can be updated as necessary.
 
 With
 
@@ -277,7 +342,7 @@ With
 
 - a data directory at `/data/roa`,
 
-- a 8 GiB NVIDIA Quadro RTX 4000 GPU to run inference,
+- a 8 GiB NVIDIA Quadro RTX 4000 GPU to run inference (alternatively, an A40 or A100 increasing the batch size and removing `--small-gpu`),
 
 - and EUMETSAT Data Store credentials saved in `~/.eumdac/credentials`,
 
@@ -304,7 +369,7 @@ $ apptainer run --nv --bind /data/roa:/data ~/roa.sif \
         --quantiles 0.05 0.16 0.25 0.50 0.75 0.84 0.95 \
         --small_gpu
 ```
-and that's it!
+and that's it! The dataset is uploaded with `scripts/upload.py`.
 
 Note that different GPUs can introduce numerical differences when comparing to inference on CPUs.
 
@@ -331,7 +396,7 @@ Amell, A., Hee, L., Pfreundschuh, S., & Eriksson, P. (2025). Probabilistic near�
 
 If you also used data from the Registry of Open Data on AWS, consider using the statement "RoA data was accessed on [DATE] at registry.opendata.aws/roa"
 
-## Acknowledgments
+## Acknowledgements
 
 We would like to acknowledge:
 
