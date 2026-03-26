@@ -43,7 +43,7 @@ s3://rainoverafrica/
     └── roa_2024.zarr/
 ```
 
-We create one Zarr file per year and follow the pattern `roa_YYYY.zarr`. We are processing the data in batches. See the notes on the coordinates in [Reading RoA data](#22-reading-roa-data)(#22-reading-roa-data).
+We create one Zarr file per year and follow the pattern `roa_YYYY.zarr`. We are processing the data in batches. See the notes on the coordinates in [Reading RoA data](#22-reading-roa-data).
 
 If you need to explore further the directory tree, you can use the [AWS CLI](https://github.com/aws/aws-cli) or [fsspec's s3fs](https://github.com/fsspec/s3fs).
 
