@@ -43,7 +43,7 @@ s3://rainoverafrica/
     └── roa_2024.zarr/
 ```
 
-We create one Zarr file per year and follow the pattern `roa_YYYY.zarr`. We are processing the data in batches.
+We create one Zarr file per year and follow the pattern `roa_YYYY.zarr`. We are processing the data in batches. See the notes on the coordinates in [Reading RoA data](#22-reading-roa-data)(#22-reading-roa-data).
 
 If you need to explore further the directory tree, you can use the [AWS CLI](https://github.com/aws/aws-cli) or [fsspec's s3fs](https://github.com/fsspec/s3fs).
 
@@ -93,6 +93,8 @@ ds_sel = ds_sel.compute()
 ```
 
 More examples follow in the section [how to use the data](#3-how-to-use-the-data).
+
+**Note on the coordinates for data on AWS**: Retrievals that do not correspond to the first timestamp of the year can be misaligned by half a pixel (1.5 km). It is not documented which timestamps suffer this misalignment. To concatenate data from different years that is not aligned, [`xarray.Dataset.reindex`](https://docs.xarray.dev/en/stable/generated/xarray.Dataset.reindex.html) or [`xarray.align`](https://docs.xarray.dev/en/latest/generated/xarray.align.html) can, for example, be used.
 
 ## 2.3. Dataset content
 
