@@ -30,7 +30,8 @@ def combine_parts(file):
                 d.drop_vars(['latitude', 'longitude'])
                 for d in datasets
             ],
-            dim='time'
+            dim='time',
+            join='override'
         )
         .sortby('time')
     )
