@@ -380,9 +380,10 @@ class MSGNative:
         satellite_zenith = satellite_angles(
             lons_o,
             lats_o,
-            orbital_parameters['satellite_actual_longitude'],
-            orbital_parameters['satellite_actual_latitude'],
-            orbital_parameters['satellite_actual_altitude'],
+            # At least files for 2012-12-08 lack the 'actual satellite' position, so we fall back to the nominal one in that case
+            orbital_parameters['satellite_actual_longitude'] if 'satellite_actual_longitude' in orbital_parameters else orbital_parameters['satellite_nominal_longitude'],
+            orbital_parameters['satellite_actual_latitude'] if 'satellite_actual_latitude' in orbital_parameters else orbital_parameters['satellite_nominal_latitude'],
+            orbital_parameters['satellite_actual_altitude'] if 'satellite_actual_altitude' in orbital_parameters else orbital_parameters['projection_altitude'],
             SEVIRI_0DEG_PROJ4['a'],
             SEVIRI_0DEG_PROJ4['a'] * (1 - 1 / SEVIRI_0DEG_PROJ4['rf'])
         )[1].astype(np.float32)
