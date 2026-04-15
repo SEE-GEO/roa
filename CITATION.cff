@@ -1,0 +1,21 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Rain over Africa
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Adrià
+    family-names: Amell
+    email: amell@chalmers.se
+    affiliation: Chalmers University of Technology
+    orcid: 'https://orcid.org/0000-0002-8571-6686'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.14710246
+    description: RoA software
+repository-code: 'https://github.com/SEE-GEO/roa'
+license: MIT
